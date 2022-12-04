@@ -34,6 +34,10 @@ function Setup {
         '--force'
     )
     Invoke-External perl init-repository @Options
+
+    if ( (${Target} -eq "arm64") -and [string]::IsNullOrWhiteSpace($script:QtHostPath) ) {
+        throw "Qt $($Version) must be installed and QtHostPath argument must be passed to cross-compile to Windows ARM64."
+    }
 }
 
 function Clean {
@@ -82,14 +86,43 @@ function Configure {
         $QtBuildConfiguration = '-release'
     }
 
-    $BuildCommand = "..\..\..\qt6\configure -opensource -confirm-license ${QtBuildConfiguration} -nomake examples -nomake tests -schannel -no-dbus -no-freetype -no-icu -no-openssl -no-feature-androiddeployqt -no-feature-pdf -no-feature-printsupport -no-feature-qmake -no-feature-sql -no-feature-testlib -no-feature-windeployqt -qt-doubleconversion -qt-pcre -qt-zlib -qt-libjpeg -qt-libpng -qt-libmd4c -qt-tiff -qt-webp -DQT_NO_PDF -DCMAKE_IGNORE_PREFIX_PATH=C:/Strawberry/c -prefix ${BuildPath}"
+    $BuildCommand = @("..\..\..\qt6\configure")
+
+    if (${Target} -eq "ARM64") {
+        $BuildCommand += @("-platform win32-msvc -xplatform win32-arm64-msvc -qt-host-path '$($script:QtHostPath)'")
+    }
+    
+    $BuildCommand += @(
+        "-opensource",
+        "-confirm-license",
+        "${QtBuildConfiguration}",
+        "-nomake",
+        "examples",
+        "-nomake",
+        "tests",
+        "-schannel",
+        "-no-dbus",
+        "-no-freetype",
+        "-no-icu",
+        "-no-openssl",
+        "-no-feature-androiddeployqt",
+        "-no-feature-pdf",
+        "-no-feature-printsupport",
+        "-no-feature-qmake",
+        "-no-feature-sql",
+        "-no-feature-testlib",
+        "-no-feature-windeployqt",
+        "-DQT_NO_PDF",
+        "-prefix", "${BuildPath}"
+    )
+    
 
     $Params = @{
         BasePath = (Get-Location | Convert-Path)
         BuildPath = "."
         BuildCommand = "${BuildCommand}"
         Target = $Target
-        HostArchitecture = $Target
+        HostArchitecture = ($Target, 'x64')[$Target -eq 'ARM64']
     }
 
     Invoke-DevShell @Params
@@ -106,7 +139,7 @@ function Build {
         BuildPath = "."
         BuildCommand = "cmake --build . --parallel"
         Target = $Target
-        HostArchitecture = $Target
+        HostArchitecture = ($Target, 'x64')[$Target -eq 'ARM64']
     }
 
     Invoke-DevShell @Params
@@ -125,7 +158,7 @@ function Install {
         BuildPath = "."
         BuildCommand = "${BuildCommand}"
         Target = $Target
-        HostArchitecture = $Target
+        HostArchitecture = ($Target, 'x64')[$Target -eq 'ARM64']
     }
 
     Invoke-DevShell @Params
