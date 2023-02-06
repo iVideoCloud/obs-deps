@@ -1,16 +1,7 @@
 name: build_deps
 
 on:
-  push:
-    branches:
-      - master
-    tags:
-      - '20[2-9][0-9]-[0-9][0-9]-[0-9][0-9]'
-  pull_request:
-    paths-ignore:
-      - '**.md'
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
   ffmpeg-build:
